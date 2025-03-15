@@ -1,0 +1,6 @@
+app:
+  petr:
+    kafka:
+      bootstrap-servers: 192.168.50.103:9092
+      producer:
+        topic: rest_data
