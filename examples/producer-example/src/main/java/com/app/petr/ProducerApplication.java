@@ -1,61 +1,45 @@
 package com.app.petr;
 
-import org.apache.avro.io.Encoder;
-import org.apache.avro.io.EncoderFactory;
-import org.apache.avro.specific.SpecificDatumWriter;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.springframework.beans.factory.annotation.Autowired;
+import app.petr.Message;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+import org.springframework.kafka.core.KafkaTemplate;
 
-import java.io.ByteArrayOutputStream;
+import java.nio.ByteBuffer;
 
 @SpringBootApplication
-public class ProducerApplication implements ApplicationRunner {
-
-    @Autowired
-    private KafkaProducer<String, byte[]> kafkaProducer;
-
-    @Autowired
-    private KafkaProperties properties;
+public class ProducerApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(ProducerApplication.class, args);
     }
 
-    @Override
-    public void run(ApplicationArguments args) throws Exception {
-        SpecificDatumWriter<Message> writer = new SpecificDatumWriter<>(Message.class);
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        Encoder encoder = EncoderFactory.get().binaryEncoder(out, null);
+    @Bean
+    public ApplicationRunner runner(KafkaTemplate<String, byte[]> kafkaTemplate, KafkaProperties properties) {
+        return args -> {
+            String topic = properties.getProducer().getTopic();
+            if (topic == null) {
+                throw new IllegalStateException("Producer topic is not configured");
+            }
 
-        String topic = properties.getProducer().getTopic();
-        if (topic == null) {
-            throw new IllegalStateException("Producer topic is not configured");
-        }
+            for (int i = 0; i < 100; i++) {
+                Message message = Message.newBuilder()
+                        .setId("id-" + i)
+                        .setContent("Message " + i)
+                        .setTimestamp(System.currentTimeMillis())
+                        .build();
 
-        for (int i = 0; i < 100; i++) {
-            Message message = Message.newBuilder()
-                    .setId("id-" + i)
-                    .setContent("Message " + i)
-                    .setTimestamp(System.currentTimeMillis())
-                    .build();
+                ByteBuffer buffer = message.toByteBuffer();
+                byte[] messageBytes = new byte[buffer.remaining()];
+                buffer.get(messageBytes);
 
-            out.reset();
-            writer.write(message, encoder);
-            encoder.flush();
-
-            ProducerRecord<String, byte[]> record = new ProducerRecord<>(
-                    topic,
-                    message.getId().toString(),
-                    out.toByteArray()
-            );
-
-            kafkaProducer.send(record);
-            Thread.sleep(1000);
-        }
+                kafkaTemplate.send(topic, message.getId().toString(), messageBytes);
+                System.out.println("Sent message: " + message.getId());
+                Thread.sleep(1000);
+            }
+        };
     }
 }

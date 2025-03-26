@@ -1,6 +1,26 @@
-app:
-  petr:
-    kafka:
-      bootstrap-servers: 192.168.50.103:9092
-      producer:
-        topic: rest_data
+apppetr:
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      topic: test-topic
+      idempotence-enabled: true
+      acks: all
+      retries: 5
+      retry-backoff-ms: 2000
+      delivery-timeout-ms: 120000
+      request-timeout-ms: 30000
+      max-in-flight-requests: 5
+    consumer:
+      topic: test-topic
+      group-id: test-group
+      max-poll-records: 1000
+      max-poll-interval-ms: 600000
+      session-timeout-ms: 15000
+      heartbeat-interval-ms: 5000
+      fetch-max-bytes: 52428800
+      auto-commit-enabled: true
+      auto-commit-interval-ms: 5000
+      auto-offset-reset: earliest
+      retry-backoff-ms: 2000
+      max-retries: 5
+    avro-schema-path: ${project.basedir}/src/main/resources/avro/message.avdl

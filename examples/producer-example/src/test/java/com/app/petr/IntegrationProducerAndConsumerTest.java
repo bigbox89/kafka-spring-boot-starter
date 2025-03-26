@@ -1,6 +1,10 @@
 package com.app.petr;
 
-import org.apache.avro.io.*;
+import app.petr.Message;
+import org.apache.avro.io.Decoder;
+import org.apache.avro.io.DecoderFactory;
+import org.apache.avro.io.Encoder;
+import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.specific.SpecificDatumReader;
 import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -23,7 +27,7 @@ import java.util.Properties;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Testcontainers
-public class KafkaIntegrationTest {
+public class IntegrationProducerAndConsumerTest {
 
     private static final String TOPIC = "rest_data";
 

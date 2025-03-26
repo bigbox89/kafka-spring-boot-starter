@@ -1,54 +1,24 @@
 package com.app.petr;
 
-import org.apache.avro.io.Decoder;
-import org.apache.avro.io.DecoderFactory;
-import org.apache.avro.specific.SpecificDatumReader;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
+
+import app.petr.Message;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.kafka.annotation.KafkaListener;
 
-import java.time.Duration;
-import java.util.Collections;
+import java.nio.ByteBuffer;
 
 @SpringBootApplication
-public class ConsumerApplication implements ApplicationRunner {
-
-    @Autowired
-    private KafkaConsumer<String, byte[]> kafkaConsumer;
-
-    @Autowired
-    private KafkaProperties properties;
+public class ConsumerApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(ConsumerApplication.class, args);
     }
 
-    @Override
-    public void run(ApplicationArguments args) throws Exception {
-        String topic = properties.getConsumer().getTopic();
-        if (topic == null) {
-            throw new IllegalStateException("Consumer topic is not configured");
-        }
-
-        kafkaConsumer.subscribe(Collections.singleton(topic));
-        SpecificDatumReader<Message> reader = new SpecificDatumReader<>(Message.class);
-
-        while (true) {
-            ConsumerRecords<String, byte[]> records = kafkaConsumer.poll(Duration.ofMillis(100));
-            records.forEach(record -> {
-                try {
-                    Decoder decoder = DecoderFactory.get().binaryDecoder(record.value(), null);
-                    Message message = reader.read(null, decoder);
-                    System.out.printf("Received message: id=%s, content=%s, timestamp=%d%n",
-                            message.getId(), message.getContent(), message.getTimestamp());
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            });
-        }
+    @KafkaListener(topics = "#{kafkaProperties.consumer.topic}", groupId = "#{kafkaProperties.consumer.groupId}")
+    public void listen(byte[] message) throws Exception {
+        Message avroMessage = Message.fromByteBuffer(ByteBuffer.wrap(message));
+        System.out.printf("Received message: id=%s, content=%s, timestamp=%d%n",
+                avroMessage.getId(), avroMessage.getContent(), avroMessage.getTimestamp());
     }
 }
